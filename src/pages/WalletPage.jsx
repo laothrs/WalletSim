@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-
-// Simgeler
-import { IoSend, IoArrowDown, IoAddCircle } from 'react-icons/io5';
-
-// Bileşenler
-import AssetCard from '../components/AssetCard';
+import { IoSend, IoArrowDown, IoWallet, IoTrendingUp, IoMenu } from 'react-icons/io5';
 
 const WalletPage = () => {
   const [user, setUser] = useState(null);
   const [wallets, setWallets] = useState([]);
   const [marketData, setMarketData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selectedWallet, setSelectedWallet] = useState(null);
+
   const [error, setError] = useState(null);
   const [sendError, setSendError] = useState(null);
   const [sendSuccess, setSendSuccess] = useState(null);
@@ -210,62 +207,95 @@ const WalletPage = () => {
   const dailyChange = getDailyChange();
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-[#121827] text-white p-4 pb-20">
-      <div className="w-full max-w-md bg-gray-800 rounded-lg shadow-xl p-6 mt-8">
-        <h2 className="text-center text-lg font-semibold text-gray-400 mb-2">Toplam Portföy Bakiyesi</h2>
-        <p className="text-center text-4xl font-bold mb-1">{formatCurrency(calculateTotalPortfolioValue())}</p>
-        <p className={`text-center text-sm ${dailyChange.positive ? 'text-green-400' : 'text-red-400'}`}>
-          Bugün {dailyChange.positive ? '+' : '-'}{dailyChange.value}%
-        </p>
-
-        <div className="flex justify-around items-center my-8">
-          <button onClick={() => navigate('/send')} className="flex flex-col items-center text-blue-400 hover:text-blue-300 transition-colors duration-200">
-            <div className="bg-blue-600 p-3 rounded-full mb-1">
-              <IoSend className="text-2xl text-white" />
-            </div>
-            <span className="text-xs">Gönder</span>
-          </button>
-          <button className="flex flex-col items-center text-blue-400 hover:text-blue-300 transition-colors duration-200">
-            <div className="bg-green-600 p-3 rounded-full mb-1">
-              <IoArrowDown className="text-2xl text-white" />
-            </div>
-            <span className="text-xs">Al</span>
-          </button>
-          <button className="flex flex-col items-center text-blue-400 hover:text-blue-300 transition-colors duration-200">
-            <div className="bg-purple-600 p-3 rounded-full mb-1">
-              <IoAddCircle className="text-2xl text-white" />
-            </div>
-            <span className="text-xs">Satın Al</span>
+    <div className="min-h-screen bg-[#0A0A0A]">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 bg-[#0A0A0A] border-b border-gray-800 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <IoWallet className="text-2xl text-blue-500" />
+            <h1 className="text-xl font-bold text-white">Wallet</h1>
+          </div>
+          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+            <IoMenu className="text-2xl text-white" />
           </button>
         </div>
+      </header>
 
-        <h3 className="text-lg font-semibold text-gray-300 mb-4">Varlıklarım</h3>
+      {/* Main Content */}
+      <main className="pt-20 pb-24 px-4 max-w-7xl mx-auto">
+        {/* Portfolio Value Card */}
+        <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl p-6 mb-8 backdrop-blur-xl border border-gray-800">
+          <p className="text-gray-400 mb-2">Portfolio Değeri</p>
+          <h2 className="text-4xl font-bold text-white mb-4">
+            ${calculateTotalPortfolioValue()}
+          </h2>
+          <div className="flex space-x-3">
+            <button className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-2xl font-medium flex items-center justify-center space-x-2 hover:bg-blue-600 transition-colors">
+              <IoArrowDown className="text-xl" />
+              <span>Al</span>
+            </button>
+            <button className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-2xl font-medium flex items-center justify-center space-x-2 hover:bg-blue-600 transition-colors">
+              <IoSend className="text-xl" />
+              <span>Gönder</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tokens List */}
         <div className="space-y-4">
-          {wallets.length === 0 ? (
-            <p className="text-gray-400 text-center">Henüz cüzdanınız yok.</p>
-          ) : (
-            wallets.map((wallet) => {
-              const coinId = wallet.currency.toLowerCase();
-              const coinData = marketData[coinId];
-              const priceChangePercentage = coinData ? coinData.price_change_percentage_24h : 0;
-
-              return (
-                <AssetCard
-                  key={wallet.currency}
-                  icon={coinData ? coinData.image : 'https://via.placeholder.com/40'}
-                  name={wallet.currency}
-                  symbol={coinData ? coinData.symbol : ''}
-                  price={coinData ? coinData.current_price : 0}
-                  userBalance={wallet.balance}
-                  priceChangePercentage={priceChangePercentage}
+          <h3 className="text-lg font-semibold text-white mb-4">Tokens</h3>
+          {wallets.map((wallet) => (
+            <div
+              key={wallet.id}
+              className="bg-[#1A1A1A] rounded-2xl p-4 flex items-center hover:bg-[#242424] transition-colors cursor-pointer"
+              onClick={() => setSelectedWallet(wallet)}
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mr-4">
+                <img
+                  src={`/icons/${wallet.currency.toLowerCase()}.svg`}
+                  alt={wallet.currency}
+                  className="w-8 h-8"
                 />
-              );
-            })
-          )}
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-white">{wallet.currency}</h4>
+                <p className="text-sm text-gray-400">
+                  {wallet.balance} {wallet.currency}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-medium text-white">
+                  ${(wallet.balance * marketData[wallet.currency.toLowerCase()]?.current_price || 0).toFixed(2)}
+                </p>
+                <p className="text-sm text-green-500 flex items-center justify-end">
+                  <IoTrendingUp className="mr-1" />
+                  +2.5%
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#1A1A1A] border-t border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-around">
+          <button className="text-white opacity-60 hover:opacity-100 transition-opacity flex flex-col items-center">
+            <IoWallet className="text-2xl" />
+            <span className="text-xs mt-1">Wallet</span>
+          </button>
+          <button className="text-white opacity-60 hover:opacity-100 transition-opacity flex flex-col items-center">
+            <IoSend className="text-2xl" />
+            <span className="text-xs mt-1">Send</span>
+          </button>
+          <button className="text-white opacity-60 hover:opacity-100 transition-opacity flex flex-col items-center">
+            <IoArrowDown className="text-2xl" />
+            <span className="text-xs mt-1">Receive</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 };
 
-export default WalletPage; 
+export default WalletPage;
