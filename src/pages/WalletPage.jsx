@@ -3,7 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { IoSend, IoArrowDown, IoWallet, IoTrendingUp, IoMenu } from 'react-icons/io5';
+import { IoSend, IoWallet, IoTrendingUp, IoMenu, IoAdd } from 'react-icons/io5';
 
 const WalletPage = () => {
   const [user, setUser] = useState(null);
@@ -207,93 +207,76 @@ const WalletPage = () => {
   const dailyChange = getDailyChange();
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 bg-[#0A0A0A] border-b border-gray-800 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Header */}
+        <header className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <IoWallet className="text-2xl text-blue-500" />
-            <h1 className="text-xl font-bold text-white">Wallet</h1>
-          </div>
-          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
-            <IoMenu className="text-2xl text-white" />
-          </button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="pt-20 pb-24 px-4 max-w-7xl mx-auto">
-        {/* Portfolio Value Card */}
-        <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl p-6 mb-8 backdrop-blur-xl border border-gray-800">
-          <p className="text-gray-400 mb-2">Portfolio Değeri</p>
-          <h2 className="text-4xl font-bold text-white mb-4">
-            ${calculateTotalPortfolioValue()}
-          </h2>
-          <div className="flex space-x-3">
-            <button className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-2xl font-medium flex items-center justify-center space-x-2 hover:bg-blue-600 transition-colors">
-              <IoArrowDown className="text-xl" />
-              <span>Al</span>
-            </button>
-            <button className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-2xl font-medium flex items-center justify-center space-x-2 hover:bg-blue-600 transition-colors">
-              <IoSend className="text-xl" />
-              <span>Gönder</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Tokens List */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Tokens</h3>
-          {wallets.map((wallet) => (
-            <div
-              key={wallet.id}
-              className="bg-[#1A1A1A] rounded-2xl p-4 flex items-center hover:bg-[#242424] transition-colors cursor-pointer"
-              onClick={() => setSelectedWallet(wallet)}
-            >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mr-4">
-                <img
-                  src={`/icons/${wallet.currency.toLowerCase()}.svg`}
-                  alt={wallet.currency}
-                  className="w-8 h-8"
-                />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-white">{wallet.currency}</h4>
-                <p className="text-sm text-gray-400">
-                  {wallet.balance} {wallet.currency}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium text-white">
-                  ${(wallet.balance * marketData[wallet.currency.toLowerCase()]?.current_price || 0).toFixed(2)}
-                </p>
-                <p className="text-sm text-green-500 flex items-center justify-end">
-                  <IoTrendingUp className="mr-1" />
-                  +2.5%
-                </p>
-              </div>
+            <div className="p-3 bg-primary/10 rounded-full">
+              <IoWallet className="w-6 h-6 text-primary" />
             </div>
-          ))}
-        </div>
-      </main>
+            <h1 className="heading-1">Wallet</h1>
+          </div>
+          <button className="p-2 hover:bg-background-card rounded-full transition-colors">
+            <IoMenu className="w-6 h-6 text-text-secondary" />
+          </button>
+        </header>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#1A1A1A] border-t border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-around">
-          <button className="text-white opacity-60 hover:opacity-100 transition-opacity flex flex-col items-center">
-            <IoWallet className="text-2xl" />
-            <span className="text-xs mt-1">Wallet</span>
+        {/* Portfolio Value Card */}
+        <div className="card space-y-4">
+          <p className="text-text-secondary">Toplam Portföy Değeri</p>
+          <h2 className="text-4xl font-bold text-gradient">
+            {formatCurrency(calculateTotalPortfolioValue())}
+          </h2>
+          <div className="flex items-center space-x-2 text-secondary">
+            <IoTrendingUp className="w-5 h-5" />
+            <span className="text-sm font-medium">+2.5%</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-4">
+          <button className="btn-primary flex items-center justify-center space-x-2">
+            <IoSend className="w-5 h-5" />
+            <span>Para Gönder</span>
           </button>
-          <button className="text-white opacity-60 hover:opacity-100 transition-opacity flex flex-col items-center">
-            <IoSend className="text-2xl" />
-            <span className="text-xs mt-1">Send</span>
-          </button>
-          <button className="text-white opacity-60 hover:opacity-100 transition-opacity flex flex-col items-center">
-            <IoArrowDown className="text-2xl" />
-            <span className="text-xs mt-1">Receive</span>
+          <button className="btn-primary bg-secondary hover:bg-secondary/90 flex items-center justify-center space-x-2">
+            <IoAdd className="w-5 h-5" />
+            <span>Para Al</span>
           </button>
         </div>
-      </nav>
+
+        {/* Wallets */}
+        <div className="space-y-4">
+          <h2 className="heading-2">Cüzdanlarım</h2>
+          <div className="grid gap-4">
+            {wallets.map((wallet) => {
+              const coinId = wallet.currency.toLowerCase();
+              const marketInfo = marketData[coinId];
+              const value = marketInfo ? wallet.balance * marketInfo.current_price : 0;
+
+              return (
+                <div key={wallet.id} className="card hover:border-primary/30 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h3 className="font-semibold">{wallet.currency}</h3>
+                      <p className="text-text-secondary text-sm">{wallet.balance} {wallet.currency}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(value)}</p>
+                      {marketInfo && (
+                        <p className={`text-sm ${marketInfo.price_change_percentage_24h >= 0 ? 'text-secondary' : 'text-red-500'}`}>
+                          {marketInfo.price_change_percentage_24h.toFixed(2)}%
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
