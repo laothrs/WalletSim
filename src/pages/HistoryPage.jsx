@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
-import { auth, db, functions } from '../firebase';
+import { auth, functions } from '../firebase';
 import { query, collection, where, orderBy, getDocs } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+
+// Simgeler
+import { IoArrowBack, IoArrowUpCircleOutline, IoArrowDownCircleOutline } from 'react-icons/io5';
 
 const HistoryPage = () => {
   const [user, setUser] = useState(null);
@@ -28,7 +31,7 @@ const HistoryPage = () => {
 
   const fetchTransactions = async (userId) => {
     try {
-      const transactionsRef = collection(db, "transactions");
+      const transactionsRef = collection(functions.app.firestore(), "transactions"); // Use firestore() from functions.app
 
       // Fetch sent transactions
       const sentQuery = query(transactionsRef, where("senderId", "==", userId), orderBy("timestamp", "desc"));
@@ -63,44 +66,76 @@ const HistoryPage = () => {
     } catch (err) {
       console.error("İşlemler alınırken hata oluştu:", err);
       setError("İşlem geçmişi yüklenirken bir hata oluştu.");
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-dark-modern text-white">Yükleniyor...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#121827] text-white">
+        <div className="text-center">
+          <p className="text-xl">İşlemler Yükleniyor...</p>
+          {/* Basit bir iskelet yükleyici eklenebilir */}
+          <div className="animate-pulse mt-4 space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-700 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-dark-modern text-white flex flex-col items-center p-4">
-      <div className="w-full max-w-4xl bg-gray-800 p-8 rounded-lg shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold">İşlem Geçmişi</h2>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Geri
-          </button>
-        </div>
+    <div className="min-h-screen flex flex-col bg-[#121827] text-white p-4 pb-20">
+      <header className="flex justify-between items-center py-4">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="text-gray-400 hover:text-white transition-colors duration-200"
+        >
+          <IoArrowBack className="text-2xl" />
+        </button>
+        <h1 className="text-2xl font-bold">İşlem Geçmişi</h1>
+        <div className="w-6">{/* Spacer */}</div>
+      </header>
 
-        {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+      <main className="flex-grow w-full max-w-md mx-auto">
+        {error && <p className="text-red-400 text-center mb-4">Hata: {error}</p>}
 
         {transactions.length === 0 ? (
-          <p>Henüz hiç işlem yok.</p>
+          <p className="text-gray-400 text-center mt-8">Henüz hiç işlem yok.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
             {transactions.map((tx) => (
-              <div key={tx.id} className="bg-gray-700 p-4 rounded-lg shadow">
-                <p className="text-lg font-bold">{tx.type === 'sent' ? 'Gönderilen' : 'Alınan'} {tx.currency}</p>
-                <p>Miktar: {tx.amount.toFixed(2)}</p>
-                <p>Gönderen: {tx.senderUsername}</p>
-                <p>Alıcı: {tx.receiverUsername}</p>
-                <p className="text-sm text-gray-400">Tarih: {tx.timestamp.toDate().toLocaleString()}</p>
+              <div key={tx.id} className="bg-gray-800 rounded-lg p-4 shadow-md flex items-center space-x-4">
+                {tx.type === 'sent' ? (
+                  <IoArrowUpCircleOutline className="text-red-400 text-3xl flex-shrink-0" />
+                ) : (
+                  <IoArrowDownCircleOutline className="text-green-400 text-3xl flex-shrink-0" />
+                )}
+                <div className="flex-grow">
+                  <p className="text-lg font-semibold">
+                    {tx.type === 'sent' ? 'Gönderildi:' : 'Alındı:'} {tx.currency}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {tx.type === 'sent' ? `Kime: ${tx.receiverUsername}` : `Kimden: ${tx.senderUsername}`}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Tarih: {new Date(tx.timestamp.seconds * 1000).toLocaleString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-lg font-bold ${tx.type === 'sent' ? 'text-red-400' : 'text-green-400'}`}>
+                    {tx.type === 'sent' ? '-' : '+'}{tx.amount.toFixed(2)} {tx.currency}
+                  </p>
+                  <p className="text-xs text-gray-500">ID: {tx.id.substring(0, 8)}...</p>
+                </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };
