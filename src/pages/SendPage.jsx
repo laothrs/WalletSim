@@ -4,6 +4,9 @@ import { auth, functions } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 
+// Simgeler
+import { IoQrCode, IoSend } from 'react-icons/io5';
+
 const SendPage = () => {
   const [user, setUser] = useState(null);
   const [wallets, setWallets] = useState([]);
@@ -14,8 +17,11 @@ const SendPage = () => {
   const [selectedCurrency, setSelectedCurrency] = useState('');
   const [message, setMessage] = useState(null);
   const [isError, setIsError] = useState(false);
+  const [sendAmountType, setSendAmountType] = useState('crypto'); // 'crypto' or 'usd'
 
   const navigate = useNavigate();
+
+  const networkFee = 1.50; // Hardcoded realistic value
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -105,91 +111,128 @@ const SendPage = () => {
     }
   };
 
+  const handleMaxAmount = () => {
+    const selectedWallet = wallets.find(w => w.id === senderWalletId);
+    if (selectedWallet) {
+      setAmount(selectedWallet.balance.toString());
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  };
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-dark-modern text-white">Yükleniyor...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[#121827] text-white">Yükleniyor...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-dark-modern text-white flex flex-col items-center p-4">
-      <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold">Fon Gönder</h2>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Geri
-          </button>
-        </div>
+    <div className="min-h-screen flex flex-col bg-[#121827] text-white p-4 pb-20">
+      <header className="text-center py-4">
+        <h1 className="text-2xl font-bold">Gönder</h1>
+      </header>
 
-        <form onSubmit={handleSendFunds} className="space-y-4">
-          <div>
-            <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="senderWallet">
-              Gönderen Cüzdan
-            </label>
-            <select
-              id="senderWallet"
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-              value={senderWalletId}
-              onChange={(e) => {
-                setSenderWalletId(e.target.value);
-                const selectedWallet = wallets.find(w => w.id === e.target.value);
-                if (selectedWallet) {
-                  setSelectedCurrency(selectedWallet.currency);
-                }
-              }}
-              required
+      <main className="flex-grow flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-gray-800 rounded-lg shadow-xl p-6">
+          <form onSubmit={handleSendFunds} className="space-y-6">
+            {/* Sender Wallet Selection */}
+            <div>
+              <label htmlFor="senderWallet" className="block text-gray-300 text-sm font-bold mb-2">
+                Gönderen Cüzdan
+              </label>
+              <select
+                id="senderWallet"
+                className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
+                value={senderWalletId}
+                onChange={(e) => {
+                  setSenderWalletId(e.target.value);
+                  const selectedWallet = wallets.find(w => w.id === e.target.value);
+                  if (selectedWallet) {
+                    setSelectedCurrency(selectedWallet.currency);
+                  }
+                }}
+                required
+              >
+                {wallets.length === 0 ? (
+                  <option value="">Cüzdan yok</option>
+                ) : (
+                  wallets.map((wallet) => (
+                    <option key={wallet.id} value={wallet.id}>
+                      {wallet.currency} ({wallet.balance.toFixed(2)})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            {/* Recipient Address/Username */}
+            <div>
+              <label htmlFor="receiverUsername" className="block text-gray-300 text-sm font-bold mb-2">
+                Alıcı Adresi (Kullanıcı Adı)
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="receiverUsername"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 pr-10 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
+                  value={receiverUsername}
+                  onChange={(e) => setReceiverUsername(e.target.value)}
+                  placeholder="Kullanıcı adı veya adres"
+                  required
+                />
+                <IoQrCode className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl cursor-pointer" />
+              </div>
+            </div>
+
+            {/* Amount Input */}
+            <div>
+              <label htmlFor="amount" className="block text-gray-300 text-sm font-bold mb-2">
+                Miktar
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="number"
+                  id="amount"
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="0.01"
+                  step="0.01"
+                  placeholder="0.00"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={handleMaxAmount}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                >
+                  Max
+                </button>
+              </div>
+              {/* Future: Add toggle for crypto/USD input and live conversion */}
+            </div>
+
+            {/* Transaction Summary */}
+            <div className="text-sm text-gray-400 border-t border-gray-700 pt-4">
+              <p className="flex justify-between"><span>Ağ Ücreti:</span> <span>{formatCurrency(networkFee)}</span></p>
+              {/* Future: Add total amount to be sent, etc. */}
+            </div>
+
+            {message && (
+              <p className={`text-sm italic ${isError ? 'text-red-500' : 'text-green-500'}`}>
+                {message}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline w-full"
             >
-              {wallets.map((wallet) => (
-                <option key={wallet.id} value={wallet.id}>
-                  {wallet.currency} ({wallet.balance.toFixed(2)})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="receiverUsername">
-              Alıcı Kullanıcı Adı
-            </label>
-            <input
-              type="text"
-              id="receiverUsername"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-              value={receiverUsername}
-              onChange={(e) => setReceiverUsername(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="amount">
-              Miktar
-            </label>
-            <input
-              type="number"
-              id="amount"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min="0.01"
-              step="0.01"
-              required
-            />
-          </div>
-
-          {message && (
-            <p className={`text-sm italic ${isError ? 'text-red-500' : 'text-green-500'}`}>
-              {message}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-          >
-            Fon Gönder
-          </button>
-        </form>
-      </div>
+              Gönder
+            </button>
+          </form>
+        </div>
+      </main>
     </div>
   );
 };
