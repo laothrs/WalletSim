@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection rules
+    match /users/{userId} {
+      // Anyone can read usernames to find users (e.g., for sending funds)
+      allow read: if true;
+      // Only the authenticated user can create/update their own user document
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Wallets collection rules
+    match /wallets/{walletId} {
+      // Only the owner of the wallet can read/write their own wallet documents
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // New wallets can be created by the createInitialWallets Cloud Function
+      // (Cloud Functions run with admin privileges and bypass security rules, so no explicit create rule is needed here)
+      allow create: if request.auth != null;
+    }
+
+    // Transactions collection rules
+    match /transactions/{transactionId} {
+      // Only authenticated users can read transactions where they are either the sender or the receiver
+      allow read: if request.auth != null && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      // Transactions can only be created by the sendFunds Cloud Function
+      // (Cloud Functions run with admin privileges and bypass security rules)
+      allow write: if false; // No direct client-side write access
+    }
+  }
+} 
